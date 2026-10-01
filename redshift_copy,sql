@@ -1,0 +1,30 @@
+-- Redshift COPY command to load Parquet data from S3 staging
+COPY analytics.sales
+FROM 's3://staging-bucket/sales/'
+IAM_ROLE 'arn:aws:iam::YOUR_ACCOUNT_ID:role/RedshiftCopyRole'
+FORMAT AS PARQUET;
+
+-- Create target table with distribution and sort keys
+CREATE TABLE analytics.sales (
+    order_id      VARCHAR(50)    NOT NULL,
+    customer_id   VARCHAR(50)    NOT NULL,
+    order_date    DATE,
+    amount        DECIMAL(12,2),
+    status        VARCHAR(20),
+    year          INT,
+    month         INT
+)
+DISTKEY(customer_id)
+SORTKEY(order_date);
+
+-- Optimized analytical query example
+SELECT
+    year,
+    month,
+    status,
+    COUNT(*) AS order_count,
+    SUM(amount) AS total_revenue
+FROM analytics.sales
+WHERE order_date >= '2024-01-01'
+GROUP BY year, month, status
+ORDER BY year, month;
